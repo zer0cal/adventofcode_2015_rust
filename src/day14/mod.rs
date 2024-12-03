@@ -1,7 +1,21 @@
+use std::collections::HashMap;
+
 // --- Day 14: Reindeer Olympics ---
 pub fn answer() {
+    let reindeers = vec![
+        Reindeer::new("Vixen", 8, 8, 53),
+        Reindeer::new("Blitzen", 13, 4, 49),
+        Reindeer::new("Rudolph", 20, 7, 132),
+        Reindeer::new("Cupid", 12, 4, 43),
+        Reindeer::new("Donner", 9, 5, 38),
+        Reindeer::new("Dasher", 10, 4, 37),
+        Reindeer::new("Comet", 3, 37, 76),
+        Reindeer::new("Prancer", 9, 12, 97),
+        Reindeer::new("Dancer", 37, 1, 36),
+    ];
     println!("Day 14: Reindeer Olympics");
-    what_dist_has_the_winning_reindeer(2503);
+    what_dist_has_the_winning_reindeer(2503, &reindeers);
+    how_many_points_does_the_winning_reindeer_have(2503, &reindeers);
 }
 
 struct Reindeer<'a> {
@@ -32,19 +46,30 @@ impl Reindeer<'_> {
     }
 }
 
-fn what_dist_has_the_winning_reindeer(time: u32) {
-    let reindeers = vec![
-        Reindeer::new("Vixen", 8, 8, 53),
-        Reindeer::new("Blitzen", 13, 4, 49),
-        Reindeer::new("Rudolph", 20, 7, 132),
-        Reindeer::new("Cupid", 12, 4, 43),
-        Reindeer::new("Donner", 9, 5, 38),
-        Reindeer::new("Dasher", 10, 4, 37),
-        Reindeer::new("Comet", 3, 37, 76),
-        Reindeer::new("Prancer", 9, 12, 97),
-        Reindeer::new("Dancer", 37, 1, 36),
-    ];
+fn what_dist_has_the_winning_reindeer(time: u32, reindeers: &[Reindeer]) {
+    let mut dists: HashMap<&str, u32> = HashMap::new();
     for reindeer in reindeers.iter() {
-        println!("{}: {}", reindeer.name, reindeer.calc_dist_of_time(time));
+        dists.insert(reindeer.name, reindeer.calc_dist_of_time(time));
     }
+    let max = dists.iter().max_by(|x, y| x.1.cmp(y.1)).unwrap();
+    println!("{}: {}", max.0, max.1);
+}
+
+fn how_many_points_does_the_winning_reindeer_have(time: u32, reindeers: &[Reindeer]) {
+    let mut scores: HashMap<&str, u32> = HashMap::new();
+    let mut dists: HashMap<&str, u32> = HashMap::new();
+    for t in 1..=time {
+        for reindeer in reindeers.iter() {
+            dists.insert(reindeer.name, reindeer.calc_dist_of_time(t));
+        }
+        let max = dists.iter().max_by(|x, y| x.1.cmp(y.1)).unwrap();
+        scores
+            .entry(max.0)
+            .and_modify(|score| *score += 1)
+            .or_insert(1);
+        dists.clear();
+    }
+    println!("{:#?}", scores);
+    let max = scores.iter().max_by(|x, y| x.1.cmp(y.1)).unwrap();
+    println!("{}: {}", max.0, max.1);
 }
