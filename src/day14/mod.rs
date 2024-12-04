@@ -67,7 +67,7 @@ fn how_many_points_does_the_winning_reindeer_have(time: u32, reindeers: &[Reinde
             .entry(max.0)
             .and_modify(|score| *score += 1)
             .or_insert(1);
-        dists.clear();
+        // dists.clear();
     }
     println!("{:#?}", scores);
     let max = scores.iter().max_by(|x, y| x.1.cmp(y.1)).unwrap();
