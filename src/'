@@ -8,61 +8,37 @@ pub fn answer() {
     let mut ingridents = Vec::new();
     for line in ingridents_str.lines() {
         let s: Vec<&str> = line.split(";").collect();
-        let ingrident = Ingrident {
+        ingridents.push(Ingrident {
             name: s[0],
             capacity: s[1].parse::<i32>().unwrap(),
             durability: s[2].parse::<i32>().unwrap(),
             flavor: s[3].parse::<i32>().unwrap(),
             texture: s[4].parse::<i32>().unwrap(),
             calories: s[5].parse::<i32>().unwrap(),
-        };
-        ingridents.push(ingrident);
+        })
     }
 
+    let n = 4;
     let k = ingridents.len();
-    let l = 2;
-    let n = k as i32 * l;
     let c = 100 / k;
     let mut teaspoons = Vec::new();
     for ingrident in ingridents.iter() {
         teaspoons.push(Teaspoon {
-            number: c as i32,
+            number: c as u32 - 1,
             ingrident,
         })
     }
     let mut komb = Kombinator::new(n, k as u8);
-    let mut beast_score = i32::MIN;
-    let mut y = true;
-    while y {
-        y = false;
-        while let Some(v) = komb.next() {
-            let mut t_ts = teaspoons.clone();
-            let proportions: Vec<usize> = (0..k)
-                .map(|i| v.iter().filter(|x| **x == i as u8).count())
-                .collect();
-            t_ts.iter_mut()
-                .enumerate()
-                .for_each(|(i, x)| x.number += proportions[i] as i32 - l);
-            if t_ts.iter().any(|x| x.number < 0) {
-                continue;
-            }
-            let cal = calc_cal(&t_ts);
-            if cal != 500 {
-                continue;
-            }
-            let score = calc_total_score(&t_ts);
-            if beast_score < score {
-                y = true;
-                beast_score = score;
-                println!("{}, {}", cal, score);
-                teaspoons = t_ts.clone();
-            }
-        }
+    while let Some(v) = komb.next() {
+        teaspoons
+            .iter_mut()
+            .enumerate()
+            .inspect(|(i, x)| x.number += v[*i] as u32);
     }
-    println!("{}", beast_score);
+    println!("KONIEC");
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 struct Ingrident<'a> {
     name: &'a str,
     capacity: i32,
@@ -72,21 +48,21 @@ struct Ingrident<'a> {
     calories: i32,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 struct Teaspoon<'a, 'b> {
-    number: i32,
+    number: u32,
     ingrident: &'a Ingrident<'b>,
 }
 
-fn calc_total_score(teaspoons: &[Teaspoon]) -> i32 {
+fn calc_total_score(teaspoons: Vec<Teaspoon>) -> i32 {
     let (c, d, f, t) = teaspoons
         .iter()
         .map(|x| {
             (
-                x.ingrident.capacity * x.number,
-                x.ingrident.durability * x.number,
-                x.ingrident.flavor * x.number,
-                x.ingrident.texture * x.number,
+                x.ingrident.capacity * x.number as i32,
+                x.ingrident.durability * x.number as i32,
+                x.ingrident.flavor * x.number as i32,
+                x.ingrident.texture * x.number as i32,
             )
         })
         .fold((0, 0, 0, 0), |acc, x| {
@@ -95,22 +71,16 @@ fn calc_total_score(teaspoons: &[Teaspoon]) -> i32 {
     c * d * f * t
 }
 
-fn calc_cal(teaspoons: &[Teaspoon]) -> i32 {
-    let cal = teaspoons
-        .iter()
-        .map(|x| x.ingrident.calories * x.number)
-        .sum::<i32>();
-    cal
-}
+const TOTAL_PROP: u32 = 10;
 
 struct Kombinator {
-    n: i32,
+    n: u32,
     k: u8,
     v: Vec<u8>,
 }
 
 impl Kombinator {
-    pub fn new(n: i32, k: u8) -> Kombinator {
+    pub fn new(n: u32, k: u8) -> Kombinator {
         let v = vec![0; n as usize];
         Kombinator { n, k, v }
     }
