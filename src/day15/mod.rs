@@ -23,60 +23,52 @@ pub fn answer() {
 }
 
 fn highest_scoring_cookie(ingridents: &[Ingrident]) {
-    let k = ingridents.len();
     let mut teaspoons = Vec::new();
     for ingrident in ingridents.iter() {
         teaspoons.push(Teaspoon {
-            number: 25,
+            count: 25,
             ingrident,
         })
     }
-    let mut komb = Kombinator::new(100, k as u8);
-    let mut beast_score = calc_total_score(&teaspoons);
-    while let Some(v) = komb.next() {
-        let proportions: Vec<usize> = (0..k)
-            .map(|i| v.iter().filter(|x| **x == i as u8).count())
-            .collect();
+    let mut combinator = Combinator::new(100, ingridents.len() as u8);
+    let mut max_score = calc_total_score(&teaspoons);
+    while let Some(v) = combinator.next_proportion() {
         teaspoons
             .iter_mut()
             .enumerate()
-            .for_each(|(i, x)| x.number = proportions[i] as i32);
+            .for_each(|(i, x)| x.count = v[i] as i32);
         let score = calc_total_score(&teaspoons);
-        if beast_score < score {
-            beast_score = score;
+        if max_score < score {
+            max_score = score;
         }
     }
-    println!("Beast total score: {}", beast_score);
+    println!("Highest total score: {}", max_score);
 }
 
 fn highest_scoring_cookie_with_500cal(ingridents: &[Ingrident]) {
-    let k = ingridents.len();
     let mut teaspoons = Vec::new();
     for ingrident in ingridents.iter() {
         teaspoons.push(Teaspoon {
-            number: 25,
+            count: 25,
             ingrident,
         })
     }
-    let mut komb = Kombinator::new(100, k as u8);
-    let mut beast_score = 0;
-    while let Some(v) = komb.next() {
-        let proportions: Vec<usize> = (0..k)
-            .map(|i| v.iter().filter(|x| **x == i as u8).count())
-            .collect();
+    let mut combinator = Combinator::new(100, ingridents.len() as u8);
+    let mut max_score = 0;
+    while let Some(v) = combinator.next_proportion() {
         teaspoons
             .iter_mut()
             .enumerate()
-            .for_each(|(i, x)| x.number = proportions[i] as i32);
+            .for_each(|(i, x)| x.count = v[i] as i32);
         if calc_cal(&teaspoons) != 500 {
             continue;
         }
         let score = calc_total_score(&teaspoons);
-        if beast_score < score {
-            beast_score = score;
+        if max_score < score {
+            max_score = score;
         }
     }
-    println!("Beast total score with 500 cal: {}", beast_score);
+    println!("Highest total score with 500 cal: {}", max_score);
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -91,7 +83,7 @@ struct Ingrident<'a> {
 
 #[derive(Debug, Clone, Copy)]
 struct Teaspoon<'a, 'b> {
-    number: i32,
+    count: i32,
     ingrident: &'a Ingrident<'b>,
 }
 
@@ -100,10 +92,10 @@ fn calc_total_score(teaspoons: &[Teaspoon]) -> i32 {
         .iter()
         .map(|x| {
             (
-                x.ingrident.capacity * x.number,
-                x.ingrident.durability * x.number,
-                x.ingrident.flavor * x.number,
-                x.ingrident.texture * x.number,
+                x.ingrident.capacity * x.count,
+                x.ingrident.durability * x.count,
+                x.ingrident.flavor * x.count,
+                x.ingrident.texture * x.count,
             )
         })
         .fold((0, 0, 0, 0), |acc, x| {
@@ -127,46 +119,57 @@ fn calc_total_score(teaspoons: &[Teaspoon]) -> i32 {
 fn calc_cal(teaspoons: &[Teaspoon]) -> i32 {
     let cal = teaspoons
         .iter()
-        .map(|x| x.ingrident.calories * x.number)
+        .map(|x| x.ingrident.calories * x.count)
         .sum::<i32>();
     cal
 }
 
-struct Kombinator {
-    n: i32,
-    k: u8,
-    v: Vec<u8>,
+struct Combinator {
+    length: i32,
+    elements: u8,
+    state: Vec<u8>,
 }
 
-impl Kombinator {
-    pub fn new(n: i32, k: u8) -> Kombinator {
-        let v = vec![0; n as usize];
-        Kombinator { n, k, v }
+impl Combinator {
+    pub fn new(length: i32, elements: u8) -> Combinator {
+        let state = vec![0; length as usize];
+        Combinator {
+            length,
+            elements,
+            state,
+        }
     }
 
-    fn increment(&mut self) -> Option<()> {
+    pub fn next_combination(&mut self) -> Option<&Vec<u8>> {
         let mut cur = 0;
-        if self.v.iter().all(|&x| x == self.k - 1) {
+        if self.state.iter().all(|&x| x == self.elements - 1) {
             return None;
         }
-        for i in 0..self.n {
-            if self.v[i as usize] == self.k - 1 {
+        for i in 0..self.length {
+            if self.state[i as usize] == self.elements - 1 {
                 cur = 1;
                 continue;
             }
-            if self.v[i as usize] + cur < self.k {
-                let v = self.v[i as usize] + 1;
-                self.v.iter_mut().take(i as usize).for_each(|x| *x = v);
-                self.v[i as usize] = v;
+            if self.state[i as usize] + cur < self.elements {
+                let next_value = self.state[i as usize] + 1;
+                self.state
+                    .iter_mut()
+                    .take(i as usize)
+                    .for_each(|x| *x = next_value);
+                self.state[i as usize] = next_value;
                 break;
             }
         }
-        Some(())
+        Some(&self.state)
     }
 
-    pub fn next(&mut self) -> Option<&Vec<u8>> {
-        if let Some(()) = self.increment() {
-            return Some(&self.v);
+    pub fn next_proportion(&mut self) -> Option<Vec<usize>> {
+        let k = self.elements;
+        if let Some(v) = self.next_combination() {
+            let proportions: Vec<usize> = (0..k)
+                .map(|i| v.iter().filter(|x| **x == i).count())
+                .collect();
+            return Some(proportions);
         }
         None
     }
