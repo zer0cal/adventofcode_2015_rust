@@ -3,6 +3,8 @@
 
 use std::fs;
 
+const TEASPOONS: i32 = 100;
+
 pub fn answer() {
     let ingridents_str = fs::read_to_string("day15/input.txt").unwrap();
     let mut ingridents = Vec::new();
@@ -30,7 +32,7 @@ fn highest_scoring_cookie(ingridents: &[Ingrident]) {
             ingrident,
         })
     }
-    let mut combinator = Combinator::new(100, ingridents.len() as u8);
+    let mut combinator = Combinator::new(TEASPOONS, ingridents.len() as u8);
     let mut max_score = calc_total_score(&teaspoons);
     while let Some(v) = combinator.next_proportion() {
         teaspoons
@@ -53,7 +55,7 @@ fn highest_scoring_cookie_with_500cal(ingridents: &[Ingrident]) {
             ingrident,
         })
     }
-    let mut combinator = Combinator::new(100, ingridents.len() as u8);
+    let mut combinator = Combinator::new(TEASPOONS, ingridents.len() as u8);
     let mut max_score = 0;
     while let Some(v) = combinator.next_proportion() {
         teaspoons
