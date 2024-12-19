@@ -18,48 +18,67 @@ pub fn answer() {
         };
         ingridents.push(ingrident);
     }
+    highest_scoring_cookie(&ingridents);
+    highest_scoring_cookie_with_500cal(&ingridents);
+}
 
+fn highest_scoring_cookie(ingridents: &[Ingrident]) {
     let k = ingridents.len();
-    let l = 2;
-    let n = k as i32 * l;
-    let c = 100 / k;
     let mut teaspoons = Vec::new();
     for ingrident in ingridents.iter() {
         teaspoons.push(Teaspoon {
-            number: c as i32,
+            number: 25,
             ingrident,
         })
     }
-    let mut komb = Kombinator::new(n, k as u8);
-    let mut beast_score = i32::MIN;
-    let mut y = true;
-    while y {
-        y = false;
-        while let Some(v) = komb.next() {
-            let mut t_ts = teaspoons.clone();
-            let proportions: Vec<usize> = (0..k)
-                .map(|i| v.iter().filter(|x| **x == i as u8).count())
-                .collect();
-            t_ts.iter_mut()
-                .enumerate()
-                .for_each(|(i, x)| x.number += proportions[i] as i32 - l);
-            if t_ts.iter().any(|x| x.number < 0) {
-                continue;
-            }
-            let cal = calc_cal(&t_ts);
-            if cal != 500 {
-                continue;
-            }
-            let score = calc_total_score(&t_ts);
-            if beast_score < score {
-                y = true;
-                beast_score = score;
-                println!("{}, {}", cal, score);
-                teaspoons = t_ts.clone();
-            }
+    let mut komb = Kombinator::new(100, k as u8);
+    let mut beast_score = calc_total_score(&teaspoons);
+    while let Some(v) = komb.next() {
+        let mut t_ts = teaspoons.clone();
+        let proportions: Vec<usize> = (0..k)
+            .map(|i| v.iter().filter(|x| **x == i as u8).count())
+            .collect();
+        t_ts.iter_mut()
+            .enumerate()
+            .for_each(|(i, x)| x.number = proportions[i] as i32);
+        let score = calc_total_score(&t_ts);
+        if beast_score < score {
+            beast_score = score;
+            teaspoons = t_ts.clone();
         }
     }
-    println!("{}", beast_score);
+    println!("Beast total score: {}", beast_score);
+}
+
+fn highest_scoring_cookie_with_500cal(ingridents: &[Ingrident]) {
+    let k = ingridents.len();
+    let mut teaspoons = Vec::new();
+    for ingrident in ingridents.iter() {
+        teaspoons.push(Teaspoon {
+            number: 25,
+            ingrident,
+        })
+    }
+    let mut komb = Kombinator::new(100, k as u8);
+    let mut beast_score = 0;
+    while let Some(v) = komb.next() {
+        let mut t_ts = teaspoons.clone();
+        let proportions: Vec<usize> = (0..k)
+            .map(|i| v.iter().filter(|x| **x == i as u8).count())
+            .collect();
+        t_ts.iter_mut()
+            .enumerate()
+            .for_each(|(i, x)| x.number = proportions[i] as i32);
+        if calc_cal(&t_ts) != 500 {
+            continue;
+        }
+        let score = calc_total_score(&t_ts);
+        if beast_score < score {
+            beast_score = score;
+            teaspoons = t_ts.clone();
+        }
+    }
+    println!("Beast total score with 500 cal: {}", beast_score);
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -79,7 +98,7 @@ struct Teaspoon<'a, 'b> {
 }
 
 fn calc_total_score(teaspoons: &[Teaspoon]) -> i32 {
-    let (c, d, f, t) = teaspoons
+    let (mut c, mut d, mut f, mut t) = teaspoons
         .iter()
         .map(|x| {
             (
@@ -92,6 +111,18 @@ fn calc_total_score(teaspoons: &[Teaspoon]) -> i32 {
         .fold((0, 0, 0, 0), |acc, x| {
             (acc.0 + x.0, acc.1 + x.1, acc.2 + x.2, acc.3 + x.3)
         });
+    if c < 0 {
+        c = 0;
+    }
+    if d < 0 {
+        d = 0;
+    }
+    if f < 0 {
+        f = 0;
+    }
+    if t < 0 {
+        t = 0;
+    }
     c * d * f * t
 }
 
@@ -115,29 +146,28 @@ impl Kombinator {
         Kombinator { n, k, v }
     }
 
-    fn increment(&mut self) {
+    fn increment(&mut self) -> Option<()> {
         let mut cur = 0;
         if self.v.iter().all(|&x| x == self.k - 1) {
-            return;
+            return None;
         }
         for i in 0..self.n {
             if self.v[i as usize] == self.k - 1 {
                 cur = 1;
-                self.v[i as usize] = 0;
                 continue;
             }
             if self.v[i as usize] + cur < self.k {
-                self.v[i as usize] += 1;
+                let v = self.v[i as usize] + 1;
+                self.v.iter_mut().take(i as usize).for_each(|x| *x = v);
+                self.v[i as usize] = v;
                 break;
             }
-            self.v[i as usize] = 0;
         }
+        Some(())
     }
 
     pub fn next(&mut self) -> Option<&Vec<u8>> {
-        let v = self.v.clone();
-        self.increment();
-        if self.v != v {
+        if let Some(()) = self.increment() {
             return Some(&self.v);
         }
         None
