@@ -34,17 +34,16 @@ fn highest_scoring_cookie(ingridents: &[Ingrident]) {
     let mut komb = Kombinator::new(100, k as u8);
     let mut beast_score = calc_total_score(&teaspoons);
     while let Some(v) = komb.next() {
-        let mut t_ts = teaspoons.clone();
         let proportions: Vec<usize> = (0..k)
             .map(|i| v.iter().filter(|x| **x == i as u8).count())
             .collect();
-        t_ts.iter_mut()
+        teaspoons
+            .iter_mut()
             .enumerate()
             .for_each(|(i, x)| x.number = proportions[i] as i32);
-        let score = calc_total_score(&t_ts);
+        let score = calc_total_score(&teaspoons);
         if beast_score < score {
             beast_score = score;
-            teaspoons = t_ts.clone();
         }
     }
     println!("Beast total score: {}", beast_score);
@@ -62,20 +61,19 @@ fn highest_scoring_cookie_with_500cal(ingridents: &[Ingrident]) {
     let mut komb = Kombinator::new(100, k as u8);
     let mut beast_score = 0;
     while let Some(v) = komb.next() {
-        let mut t_ts = teaspoons.clone();
         let proportions: Vec<usize> = (0..k)
             .map(|i| v.iter().filter(|x| **x == i as u8).count())
             .collect();
-        t_ts.iter_mut()
+        teaspoons
+            .iter_mut()
             .enumerate()
             .for_each(|(i, x)| x.number = proportions[i] as i32);
-        if calc_cal(&t_ts) != 500 {
+        if calc_cal(&teaspoons) != 500 {
             continue;
         }
-        let score = calc_total_score(&t_ts);
+        let score = calc_total_score(&teaspoons);
         if beast_score < score {
             beast_score = score;
-            teaspoons = t_ts.clone();
         }
     }
     println!("Beast total score with 500 cal: {}", beast_score);
