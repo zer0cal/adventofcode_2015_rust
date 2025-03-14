@@ -15,10 +15,10 @@ fn optimal_happiness(s: &str) -> i32 {
     let relations = generate_relations(s);
     let people = Vec::from_iter(relations.keys());
     let mut seq_permutator = SeqPermutator::new(Box::new(people));
-    let seq = seq_permutator.next_permutation().unwrap();
+    let seq = seq_permutator.next().unwrap();
     let mut max_happiness = calculate_happiness(&relations, seq.iter().map(|x| **x).collect());
 
-    while let Some(seq) = seq_permutator.next_permutation() {
+    for seq in seq_permutator {
         let happinness = calculate_happiness(&relations, seq.iter().map(|x| **x).collect());
         if happinness > max_happiness {
             max_happiness = happinness;
@@ -43,11 +43,11 @@ fn optimal_happiness_pt2(s: &str) -> i32 {
     }
     people.push("Me");
     let mut seq_permutator = SeqPermutator::new(Box::new(people));
-    let seq = seq_permutator.next_permutation().unwrap();
-    let mut max_happiness = calculate_happiness(&relations, seq.iter().map(|x| *x).collect());
+    let seq = seq_permutator.next().unwrap();
+    let mut max_happiness = calculate_happiness(&relations, seq.to_vec());
 
-    while let Some(seq) = seq_permutator.next_permutation() {
-        let happinness = calculate_happiness(&relations, seq.iter().map(|x| *x).collect());
+    for seq in seq_permutator {
+        let happinness = calculate_happiness(&relations, seq.to_vec());
         if happinness > max_happiness {
             max_happiness = happinness;
         }
@@ -56,14 +56,16 @@ fn optimal_happiness_pt2(s: &str) -> i32 {
     max_happiness
 }
 
+type BoxVec<'a, T> = Box<Vec<&'a T>>;
+
 struct SeqPermutator<'a, T: ?Sized> {
-    seq: Box<Vec<&'a T>>,
+    seq: BoxVec<'a, T>,
     i: usize,
     c: Vec<usize>,
 }
 
 impl<'a, T: ?Sized> SeqPermutator<'a, T> {
-    pub fn new(seq: Box<Vec<&'a T>>) -> SeqPermutator<'a, T> {
+    pub fn new(seq: BoxVec<'a, T>) -> SeqPermutator<'a, T> {
         let len = seq.len();
         SeqPermutator {
             seq,
@@ -71,8 +73,12 @@ impl<'a, T: ?Sized> SeqPermutator<'a, T> {
             c: vec![0; len],
         }
     }
+}
 
-    pub fn next_permutation(&mut self) -> Option<Box<Vec<&'a T>>> {
+impl<'a, T: ?Sized> Iterator for SeqPermutator<'a, T> {
+    type Item = BoxVec<'a, T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
         if self.i == 0usize {
             self.i += 1;
             return Some(Box::clone(&self.seq));
@@ -127,9 +133,9 @@ fn calculate_happiness(relations: &HashMap<&str, HashMap<&str, i32>>, mut seq: V
 }
 
 fn generate_relations(s: &str) -> HashMap<&str, HashMap<&str, i32>> {
-    let mut lines = s.lines();
+    let lines = s.lines();
     let mut relations: HashMap<&str, HashMap<&str, i32>> = HashMap::new();
-    while let Some(val) = lines.next() {
+    for val in lines {
         let (person, other, value) = parse_line(val);
         if let Some(relation) = relations.get_mut(person) {
             relation.insert(other, value);

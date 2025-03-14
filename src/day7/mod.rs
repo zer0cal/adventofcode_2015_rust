@@ -14,16 +14,16 @@ pub fn answer() {
 
 #[derive(Debug, PartialEq, Eq)]
 enum Operation<'a> {
-    SET(&'a str),
-    AND(&'a str, &'a str),
-    OR(&'a str, &'a str),
-    LSHIFT(&'a str, u16),
-    RSHIFT(&'a str, u16),
-    NOT(&'a str),
-    NONE,
+    Set(&'a str),
+    And(&'a str, &'a str),
+    Or(&'a str, &'a str),
+    LShift(&'a str, u16),
+    RShift(&'a str, u16),
+    Not(&'a str),
+    None,
 }
 
-fn parse_instruction<'a>(s: &'a str) -> (Operation, &'a str) {
+fn parse_instruction(s: &str) -> (Operation, &str) {
     let mut tokens = s.split_whitespace();
     match (
         tokens.next(),
@@ -32,33 +32,25 @@ fn parse_instruction<'a>(s: &'a str) -> (Operation, &'a str) {
         tokens.next(),
         tokens.next(),
     ) {
-        (Some(value), Some("->"), Some(output), None, None) => {
-            return (Operation::SET(value), output);
-        }
-        (Some(l), Some("AND"), Some(r), Some("->"), Some(output)) => {
-            return (Operation::AND(l, r), output);
-        }
-        (Some(l), Some("OR"), Some(r), Some("->"), Some(output)) => {
-            return (Operation::OR(l, r), output);
-        }
+        (Some(value), Some("->"), Some(output), None, None) => (Operation::Set(value), output),
+        (Some(l), Some("AND"), Some(r), Some("->"), Some(output)) => (Operation::And(l, r), output),
+        (Some(l), Some("OR"), Some(r), Some("->"), Some(output)) => (Operation::Or(l, r), output),
         (Some(input), Some("LSHIFT"), Some(n), Some("->"), Some(output)) => {
             if let Ok(number) = n.parse::<u16>() {
-                return (Operation::LSHIFT(input, number), output);
+                return (Operation::LShift(input, number), output);
             }
-            return (Operation::NONE, output);
+            (Operation::None, output)
         }
         (Some(input), Some("RSHIFT"), Some(n), Some("->"), Some(output)) => {
             if let Ok(number) = n.parse::<u16>() {
-                return (Operation::RSHIFT(input, number), output);
+                return (Operation::RShift(input, number), output);
             }
-            return (Operation::NONE, output);
+            (Operation::None, output)
         }
         (Some("NOT"), Some(input), Some("->"), Some(output), None) => {
-            return (Operation::NOT(input), output);
+            (Operation::Not(input), output)
         }
-        _ => {
-            return (Operation::NONE, &"");
-        }
+        _ => (Operation::None, ""),
     }
 }
 
@@ -71,7 +63,7 @@ fn emulate(s: &str) -> HashMap<String, u16> {
         for line in splt.iter().filter(|x| !done.contains(&(x.to_string()))) {
             let operation = parse_instruction(line);
             match operation {
-                (Operation::SET(value), wire) => {
+                (Operation::Set(value), wire) => {
                     if let Some(value) = hm.get(value) {
                         to_be_done.push(line.to_string());
                         hm.insert(wire.to_string(), *value);
@@ -80,7 +72,7 @@ fn emulate(s: &str) -> HashMap<String, u16> {
                         hm.insert(wire.to_string(), value);
                     }
                 }
-                (Operation::AND(l, r), wire) => {
+                (Operation::And(l, r), wire) => {
                     if let (Some(l), Some(r)) = (hm.get(l), hm.get(r)) {
                         to_be_done.push(line.to_string());
                         hm.insert(wire.to_string(), l & r);
@@ -95,7 +87,7 @@ fn emulate(s: &str) -> HashMap<String, u16> {
                         hm.insert(wire.to_string(), l & r);
                     }
                 }
-                (Operation::OR(l, r), wire) => {
+                (Operation::Or(l, r), wire) => {
                     if let (Some(l), Some(r)) = (hm.get(l), hm.get(r)) {
                         to_be_done.push(line.to_string());
                         hm.insert(wire.to_string(), l | r);
@@ -110,19 +102,19 @@ fn emulate(s: &str) -> HashMap<String, u16> {
                         hm.insert(wire.to_string(), l | r);
                     }
                 }
-                (Operation::LSHIFT(key, n), wire) => {
+                (Operation::LShift(key, n), wire) => {
                     if let Some(val) = hm.get(key) {
                         to_be_done.push(line.to_string());
                         hm.insert(wire.to_string(), val << n);
                     }
                 }
-                (Operation::RSHIFT(key, n), wire) => {
+                (Operation::RShift(key, n), wire) => {
                     if let Some(val) = hm.get(key) {
                         to_be_done.push(line.to_string());
                         hm.insert(wire.to_string(), val >> n);
                     }
                 }
-                (Operation::NOT(key), wire) => {
+                (Operation::Not(key), wire) => {
                     if let Some(val) = hm.get(key) {
                         to_be_done.push(line.to_string());
                         hm.insert(wire.to_string(), !val);
@@ -132,7 +124,7 @@ fn emulate(s: &str) -> HashMap<String, u16> {
             }
         }
         done.append(&mut to_be_done.clone());
-        if to_be_done.len() == 0 {
+        if to_be_done.is_empty() {
             break;
         }
     }
@@ -150,24 +142,24 @@ mod tests {
 
     #[test]
     fn parse_test() {
-        assert_eq!(parse_instruction("1 -> a"), (Operation::SET("1"), "a"));
+        assert_eq!(parse_instruction("1 -> a"), (Operation::Set("1"), "a"));
         assert_eq!(
             parse_instruction("a AND b -> c"),
-            (Operation::AND("a", "b"), "c")
+            (Operation::And("a", "b"), "c")
         );
         assert_eq!(
             parse_instruction("a OR b -> c"),
-            (Operation::OR("a", "b"), "c")
+            (Operation::Or("a", "b"), "c")
         );
         assert_eq!(
             parse_instruction("a LSHIFT 2 -> b"),
-            (Operation::LSHIFT("a", 2), "b")
+            (Operation::LShift("a", 2), "b")
         );
         assert_eq!(
             parse_instruction("a RSHIFT 2 -> b"),
-            (Operation::RSHIFT("a", 2), "b")
+            (Operation::RShift("a", 2), "b")
         );
-        assert_eq!(parse_instruction("NOT a -> b"), (Operation::NOT("a"), "b"));
+        assert_eq!(parse_instruction("NOT a -> b"), (Operation::Not("a"), "b"));
     }
 
     #[test]

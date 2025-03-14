@@ -3,7 +3,7 @@
 use std::{collections::HashMap, fs};
 
 pub fn answer() {
-    let file = fs::read_to_string("day16/input.txt").unwrap();
+    let file = fs::read_to_string("src/day16/input.txt").unwrap();
     pt1(&file);
     pt2(&file);
 }
@@ -41,6 +41,8 @@ fn pt1(file: &str) {
     }
 }
 
+type Type<'a> = HashMap<&'a str, Box<dyn Fn(i32, i32) -> bool>>;
+
 fn pt2(file: &str) {
     let mut looked_aunt = HashMap::new();
     looked_aunt.insert("children", 3);
@@ -54,7 +56,7 @@ fn pt2(file: &str) {
     looked_aunt.insert("cars", 2);
     looked_aunt.insert("perfumes", 1);
 
-    let mut mfcsam: HashMap<&str, Box<dyn Fn(i32, i32) -> bool>> = HashMap::new();
+    let mut mfcsam: Type = HashMap::new();
 
     mfcsam.insert("children", Box::new(|x, y| x == y));
     mfcsam.insert("cats", Box::new(|a, b| a < b));
