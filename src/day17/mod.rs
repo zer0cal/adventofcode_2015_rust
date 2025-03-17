@@ -15,7 +15,7 @@ pub fn answer() {
 
 fn pt1(file: &str) -> u32 {
     let containers = get_containters(file);
-    let mut seq_com = SeqCombinator::new(Box::new(containers.iter().collect()));
+    let mut seq_com = SeqCombinator::new(Box::new(containers));
     let mut number_of_combinations = 0;
     while let Some(seq) = seq_com.next() {
         let sum: u32 = seq.iter().fold(0, |acc, x| acc + **x);
@@ -28,8 +28,8 @@ fn pt1(file: &str) -> u32 {
 
 fn pt2(file: &str) -> u32 {
     let containers = get_containters(file);
-    let mut seq_com = SeqCombinator::new(Box::new(containers.iter().collect()));
-    let mut lowest_count = containers.len();
+    let mut seq_com = SeqCombinator::new(Box::new(containers));
+    let mut lowest_count = seq_com.members.len();
     let mut numbar_of_combinations = 0;
     while let Some(seq) = seq_com.next() {
         let sum: u32 = seq.iter().fold(0, |acc, x| acc + **x);
