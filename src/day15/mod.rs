@@ -176,3 +176,41 @@ impl Combinator {
         None
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use core::panic;
+
+    use super::Combinator;
+
+    #[test]
+    fn combinator_init_state_test() {
+        let combinator = Combinator::new(5, 5);
+        let state_0 = combinator.state;
+        assert_eq!([0, 0, 0, 0, 0].to_vec(), state_0);
+    }
+
+    #[test]
+    fn combinator_next_state_test() {
+        let mut combinator = Combinator::new(3, 3);
+        let Some(next_state) = combinator.next_combination() else {
+            panic!("next_combination error");
+        };
+        assert_eq!([1, 0, 0].to_vec(), *next_state);
+
+        let Some(next_state) = combinator.next_combination() else {
+            panic!("next_combination error");
+        };
+        assert_eq!([2, 0, 0].to_vec(), *next_state);
+
+        let Some(next_state) = combinator.next_combination() else {
+            panic!("next_combination error");
+        };
+        assert_eq!([1, 1, 0].to_vec(), *next_state);
+
+        let Some(next_state) = combinator.next_combination() else {
+            panic!("next_combination error");
+        };
+        assert_eq!([2, 1, 0].to_vec(), *next_state);
+    }
+}

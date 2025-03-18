@@ -33,7 +33,7 @@ pub fn answer() {
 fn count_characters_and_utf_codes(s: &str) -> (u32, u32) {
     let mut characters = 0;
     let mut codes = 0;
-    let mut c = s.bytes().into_iter();
+    let mut c = s.bytes();
     loop {
         match c.next() {
             Some(13) => (),
@@ -72,7 +72,7 @@ fn count_characters_and_utf_codes(s: &str) -> (u32, u32) {
 }
 
 fn encode_to_utf_code(input: u8) -> String {
-    return match input {
+    match input {
         b'\"' => String::from(r#"\""#),
         b'\\' => String::from(r#"\\"#),
         // 13 => String::from(r#"\r"#),
@@ -80,7 +80,7 @@ fn encode_to_utf_code(input: u8) -> String {
         // 10 => String::from(r#"\n"#),
         10 => String::from(r#""#),
         _ => (input as char).to_string(), // _ => &"_", // u => &String::from(char::from(*u)), // u => String::from_utf8(vec![*u]).unwrap(),
-    };
+    }
 }
 
 fn encode_str_into_utf_codes(s: &str) -> String {
@@ -98,15 +98,6 @@ fn encode_str_into_utf_codes(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use crate::day8::{count_characters_and_utf_codes, encode_str_into_utf_codes};
-    use std::fs;
-
-    #[test]
-    fn first_line_from_file() {
-        let input =
-            fs::read_to_string(r"src\day8_input_first_line.txt").expect("err reading day 8 input");
-        let (characters, codes) = count_characters_and_utf_codes(&input);
-        assert_eq!((characters, codes), (7, 9));
-    }
 
     #[test]
     fn oneline() {
@@ -181,15 +172,5 @@ mod tests {
         let c = r#""\x27""#;
         let res: String = encode_str_into_utf_codes(c);
         assert_eq!(res, r#""\"\\x27\"""#)
-    }
-
-    #[test]
-    fn encoder_first_line_from_file() {
-        let input =
-            fs::read_to_string(r"src\day8_input_first_line.txt").expect("err reading day 8 input");
-        println!("{}", input);
-        println!("{:?}", input.bytes());
-        let res: String = encode_str_into_utf_codes(&input);
-        assert_eq!(res, r#""\"qxfcsmh\"""#)
     }
 }

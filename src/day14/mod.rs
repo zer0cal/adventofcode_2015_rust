@@ -34,22 +34,22 @@ impl Reindeer<'_> {
             rest_time,
         }
     }
-    fn calc_dist_of_time(&self, time: u32) -> u32 {
-        let time_resting_and_flying = self.fly_time + self.rest_time;
-        let full_cycles = time / time_resting_and_flying;
-        let dist_flight_in_full_cycles = full_cycles * (self.fly_speed * self.fly_time);
-        let time_left_after_full_cycles = time - (time_resting_and_flying * full_cycles);
-        let dist_in_left_time =
-            (self.fly_speed * self.fly_time).min(time_left_after_full_cycles * self.fly_speed);
 
-        dist_flight_in_full_cycles + dist_in_left_time
+    fn dist_over_time(&self, time: u32) -> u32 {
+        let time_both = self.fly_time + self.rest_time;
+        let cycles = time / time_both;
+        let dist = cycles * (self.fly_speed * self.fly_time);
+        let time_left = time - (time_both * cycles);
+        let dist_left = (self.fly_speed * self.fly_time).min(time_left * self.fly_speed);
+
+        dist + dist_left
     }
 }
 
 fn what_dist_has_the_winning_reindeer(time: u32, reindeers: &[Reindeer]) {
     let mut dists: HashMap<&str, u32> = HashMap::new();
     for reindeer in reindeers.iter() {
-        dists.insert(reindeer.name, reindeer.calc_dist_of_time(time));
+        dists.insert(reindeer.name, reindeer.dist_over_time(time));
     }
     let max = dists.iter().max_by(|x, y| x.1.cmp(y.1)).unwrap();
     println!("{}: {}", max.0, max.1);
@@ -60,7 +60,7 @@ fn how_many_points_does_the_winning_reindeer_have(time: u32, reindeers: &[Reinde
     let mut dists: HashMap<&str, u32> = HashMap::new();
     for t in 1..=time {
         for reindeer in reindeers.iter() {
-            dists.insert(reindeer.name, reindeer.calc_dist_of_time(t));
+            dists.insert(reindeer.name, reindeer.dist_over_time(t));
         }
         let max = dists.iter().max_by(|x, y| x.1.cmp(y.1)).unwrap();
         scores
@@ -71,4 +71,25 @@ fn how_many_points_does_the_winning_reindeer_have(time: u32, reindeers: &[Reinde
     println!("{:#?}", scores);
     let max = scores.iter().max_by(|x, y| x.1.cmp(y.1)).unwrap();
     println!("{}: {}", max.0, max.1);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Reindeer;
+
+    #[test]
+    fn dist_over_time_test() {
+        let reindeer = Reindeer::new("Test", 1, 1, 1);
+        let dist = reindeer.dist_over_time(10);
+        let expected_dist = 5;
+        assert_eq!(expected_dist, dist);
+    }
+
+    #[test]
+    fn dist_over_time_test_2() {
+        let reindeer = Reindeer::new("Test", 2, 2, 8);
+        let dist = reindeer.dist_over_time(10);
+        let expected_dist = 4;
+        assert_eq!(expected_dist, dist);
+    }
 }

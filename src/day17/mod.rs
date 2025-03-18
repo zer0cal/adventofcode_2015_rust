@@ -92,7 +92,7 @@ impl<T: Sized> SeqCombinator<T> {
         None
     }
 
-    fn inc_c(&mut self) {
+    pub fn inc_c(&mut self) {
         for b in self.c.iter_mut() {
             if *b {
                 *b = false;
@@ -101,5 +101,31 @@ impl<T: Sized> SeqCombinator<T> {
                 break;
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::SeqCombinator;
+
+    #[test]
+    fn inc_c_test() {
+        let mut seq = SeqCombinator::new(Box::new(vec![1, 2, 3]));
+        seq.inc_c();
+        assert_eq!(vec![true, false, false], seq.c);
+        seq.inc_c();
+        assert_eq!(vec![false, true, false], seq.c);
+        seq.inc_c();
+        assert_eq!(vec![true, true, false], seq.c);
+        seq.inc_c();
+        assert_eq!(vec![false, false, true], seq.c);
+        seq.inc_c();
+        assert_eq!(vec![true, false, true], seq.c);
+        seq.inc_c();
+        assert_eq!(vec![false, true, true], seq.c);
+        seq.inc_c();
+        assert_eq!(vec![true, true, true], seq.c);
+        seq.inc_c();
+        assert_eq!(vec![false, false, false], seq.c);
     }
 }

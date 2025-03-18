@@ -36,6 +36,16 @@ fn _pt1_with_prints(file: &str, cycles: i32) -> u32 {
     count_lights(&grid)
 }
 fn pt2(file: &str, cycles: i32) -> u32 {
+    let grid = load_grid(file);
+    let mut grid = lightup_corners(grid);
+    for _ in 1..=cycles {
+        let next_lifecycle = next_lifecycle_pt2(&grid);
+        grid = next_lifecycle;
+    }
+    count_lights(&grid)
+}
+
+fn _pt2_with_prints(file: &str, cycles: i32) -> u32 {
     println!("cycle 0");
     let grid = load_grid(file);
     let mut grid = lightup_corners(grid);
@@ -133,33 +143,26 @@ fn will_survive(x: isize, y: isize, grid: &[Vec<bool>]) -> bool {
 }
 
 fn will_survive_pt2(x: isize, y: isize, grid: &[Vec<bool>]) -> bool {
-    let width = grid.len();
-    let height = grid[0].len();
+    let width = grid.len() - 1;
+    let height = grid[0].len() - 1;
     let left_border = max(0, x - 1) as usize;
-    let right_border = min(width - 1, x as usize + 1);
+    let right_border = min(width, x as usize + 1);
     let top_border = max(0, y - 1) as usize;
-    let bottom_border = min(height - 1, y as usize + 1);
-    if x as usize == 0 && y as usize == 0 {
-        return true;
-    }
-    if x as usize == 0 && y as usize == height - 1 {
-        return true;
-    }
-    if x as usize == width - 1 && y as usize == 0 {
-        return true;
-    }
-    if x as usize == width - 1 && y as usize == height - 1 {
+    let bottom_border = min(height, y as usize + 1);
+    let x = x as usize;
+    let y = y as usize;
+    if !(y != 0 && y != height || x != 0 && x != height) {
         return true;
     }
     let mut count = 0;
     (left_border..=right_border).for_each(|i| {
         (top_border..=bottom_border).for_each(|j| {
-            if !(i == x as usize && j == y as usize) && grid[i][j] {
+            if !(i == x && j == y) && grid[i][j] {
                 count += 1;
             }
         });
     });
-    if grid[x as usize][y as usize] {
+    if grid[x][y] {
         return count == 2 || count == 3;
     }
     count == 3
