@@ -22,7 +22,7 @@ type Molecule<'a> = Vec<Atom<'a>>;
 
 type Rules<'a> = HashMap<Molecule<'a>, Atom<'a>>;
 
-fn get_atoms<'a>(input: &'a str) -> HashSet<Atom<'a>> {
+fn get_atoms<'a>(input: &'a str) -> Vec<Atom<'a>> {
     let mut atoms: HashSet<Atom<'a>> = HashSet::new();
     let mut chars = input.chars().peekable();
     for i in 0..input.len() {
@@ -49,23 +49,28 @@ fn get_atoms<'a>(input: &'a str) -> HashSet<Atom<'a>> {
             (_, _) => break,
         }
     }
-    atoms
+    Vec::from_iter(atoms)
 }
 
-fn get_rules<'a>(input: &'a str, atoms: &HashSet<Atom<'a>>) -> Rules<'a> {
+fn get_rules(input: &str) -> Rules {
     let mut rules = HashMap::new();
     for line in input.lines() {
         let splt: Vec<&str> = line.split_whitespace().collect();
-        let mol = get_molecule(splt[2], atoms);
+        if splt.len() < 3 {
+            println!("{}", line);
+            continue;
+        }
+        let mol = get_molecule(splt[2]);
         let atom = atom(splt[0]);
         rules.insert(mol, atom);
     }
     rules
 }
 
-fn get_molecule<'a>(input: &'a str, atoms: &HashSet<Atom<'a>>) -> Molecule<'a> {
+fn get_molecule(input: &str) -> Molecule {
     let mut chars = input.chars().peekable();
     let mut molecule: Molecule = Vec::new();
+    let atoms = get_atoms(input);
     loop {
         match (chars.next(), chars.peek()) {
             (Some(first), Some(second)) => {
@@ -90,8 +95,8 @@ fn get_molecule<'a>(input: &'a str, atoms: &HashSet<Atom<'a>>) -> Molecule<'a> {
 fn expand_molecule<'a>(
     rule: (&Molecule<'a>, &Atom<'a>),
     molecule: &Molecule<'a>,
-) -> HashSet<Molecule<'a>> {
-    let mut molecules: HashSet<Molecule<'_>> = HashSet::new();
+) -> Vec<Molecule<'a>> {
+    let mut molecules: Vec<Molecule<'_>> = Vec::new();
     let (m, a) = rule;
     for i in 0..molecule.len() {
         if molecule[i] != *a {
@@ -99,11 +104,11 @@ fn expand_molecule<'a>(
         }
         let (head, tail) = molecule.split_at(i);
         if let Some((_, tail)) = tail.split_first() {
-            molecules.insert([head, m, tail].concat());
+            molecules.push([head, m, tail].concat());
         } else if tail.last().is_some() {
-            molecules.insert([head, m].concat());
+            molecules.push([head, m].concat());
         } else {
-            molecules.insert([head].concat());
+            molecules.push([head].concat());
         }
     }
     molecules
@@ -112,60 +117,68 @@ fn expand_molecule<'a>(
 fn reduce_molecule<'a>(
     rule: (&Molecule<'a>, &Atom<'a>),
     molecule: &Molecule<'a>,
-) -> HashSet<Molecule<'a>> {
-    let mut molecules: HashSet<Molecule<'_>> = HashSet::new();
+) -> Vec<Molecule<'a>> {
+    let mut molecules: Vec<Molecule<'_>> = Vec::new();
     let (m, a) = rule;
     if m.len() > molecule.len() {
         return molecules;
     }
-    for mol_index in 0..(molecule.len() - m.len() + 1) {
+    for mol_index in (0..(molecule.len() - m.len() + 1)).rev() {
         if molecule[mol_index..mol_index + m.len()].to_vec() == *m {
             let (head, rest) = molecule.split_at(mol_index);
             let (_, tail) = rest.split_at(m.len());
-            molecules.insert([head, &[a], tail].concat());
+            molecules.push([head, &[a], tail].concat());
         }
     }
     molecules
 }
 
-fn get_steps(rules: &Rules, molecule: &Molecule) -> Option<usize> {
+fn get_steps_by_reduce(rules: &Rules, molecule: &Molecule) -> Option<usize> {
     let e = Molecule::from_iter([atom("e")]);
-    let reduced_molecules: HashSet<Molecule> = rules
+    let reduced_molecules: Vec<Molecule> = rules
         .iter()
         .flat_map(|rule| reduce_molecule((rule.0, rule.1), molecule))
         .collect();
     let mut reduced_molecules: Vec<Molecule> = reduced_molecules.into_iter().collect();
-    reduced_molecules.sort_unstable_by_key(|x| posible_reductions(rules, x));
-    for reduced in reduced_molecules.iter().rev() {
+    reduced_molecules.sort_unstable_by_key(|x| {
+        x.len()
+            + x.windows(2)
+                .filter_map(|window| {
+                    if window[0] == window[1] {
+                        Some(())
+                    } else {
+                        None
+                    }
+                })
+                .count()
+    });
+    for reduced in reduced_molecules.iter() {
         if *reduced == e {
+            println!("::: 1. {}", mol_to_str(reduced));
             return Some(1);
         }
         if reduced.contains(&atom("e")) {
             continue;
         }
-        if let Some(steps) = get_steps(rules, reduced) {
+        if let Some(steps) = get_steps_by_reduce(rules, reduced) {
+            println!("    {}. {}", steps + 1, mol_to_str(reduced));
             return Some(steps + 1);
         }
     }
     None
 }
 
-fn posible_reductions(rules: &HashMap<Molecule, Atom>, molecule: &Molecule) -> usize {
-    let mut posibilities = 0usize;
-    for key in rules.keys() {
-        molecule[..].windows(key.len()).for_each(|w| {
-            if key == w {
-                posibilities += 1
-            }
-        });
+fn mol_to_str(molecule: &Molecule) -> String {
+    let mut s = String::new();
+    for &atom in molecule {
+        s.push_str(atom);
     }
-    posibilities
+    s
 }
 
 fn pt1(input: &str, replacments: &str) -> usize {
-    let atoms = get_atoms(input);
-    let rules = get_rules(replacments, &atoms);
-    let molecule = get_molecule(input, &atoms);
+    let rules = get_rules(replacments);
+    let molecule = get_molecule(input);
     let molecules: HashSet<Molecule> = rules
         .iter()
         .flat_map(|rule| expand_molecule((rule.0, rule.1), &molecule))
@@ -174,28 +187,27 @@ fn pt1(input: &str, replacments: &str) -> usize {
 }
 
 fn pt2(input: &str, replacments: &str) -> usize {
-    let atoms = get_atoms(input);
-    let rules = get_rules(replacments, &atoms);
-    let looked_molecule = get_molecule(input, &atoms);
-    let steps = get_steps(&rules, &looked_molecule);
+    let rules = get_rules(replacments);
+    let looked_molecule = get_molecule(input);
+    let steps = get_steps_by_reduce(&rules, &looked_molecule);
     steps.unwrap()
 }
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
 
     use crate::day19::{
-        atom, expand_molecule, get_atoms, get_molecule, get_rules, get_steps, reduce_molecule,
-        Atom, Rules,
+        atom, expand_molecule, get_atoms, get_molecule, get_rules, get_steps_by_reduce, Atom, Rules,
     };
 
     #[test]
     fn get_atoms_test() {
         let input = "HHeHOHFeF";
-        let tested = get_atoms(input);
-        let expected: HashSet<Atom> =
-            HashSet::from([atom("H"), atom("He"), atom("O"), atom("Fe"), atom("F")]);
+        let mut tested = get_atoms(input);
+        let mut expected: Vec<Atom> =
+            Vec::from([atom("H"), atom("He"), atom("O"), atom("Fe"), atom("F")]);
+        tested.sort();
+        expected.sort();
         assert_eq!(expected, tested);
     }
 
@@ -204,9 +216,7 @@ mod tests {
         let replacments = "H => HO\n\
         H => OH\n\
         O => HH";
-        let input = "HO";
-        let atoms = get_atoms(input);
-        let tested = get_rules(replacments, &atoms);
+        let tested = get_rules(replacments);
         let mut expected = Rules::new();
         expected.insert([atom("H"), atom("O")].to_vec(), atom("H"));
         expected.insert([atom("O"), atom("H")].to_vec(), atom("H"));
@@ -221,9 +231,7 @@ mod tests {
         e => H\n\
         e => O\n\
         O => HH";
-        let input = "HO";
-        let atoms = get_atoms(input);
-        let tested = get_rules(replacments, &atoms);
+        let tested = get_rules(replacments);
         let mut expected = Rules::new();
         expected.insert([atom("H"), atom("O")].to_vec(), atom("H"));
         expected.insert([atom("O"), atom("H")].to_vec(), atom("H"));
@@ -236,28 +244,24 @@ mod tests {
     #[test]
     fn get_molecule_test() {
         let input = "HOHeHO";
-        let atoms = get_atoms(input);
         let expected = [atom("H"), atom("O"), atom("He"), atom("H"), atom("O")].to_vec();
-        let tested = get_molecule(input, &atoms);
+        let tested = get_molecule(input);
         assert_eq!(expected, tested);
     }
 
     #[test]
     fn generate_all_posible_molecules_test() {
-        let replacments = "H => HO\n\
-        H => OH\n\
-        O => HH";
+        let replacments = "H => HO";
         let input = "HOH";
-        let atoms = get_atoms(input);
-        let rules = get_rules(replacments, &atoms);
-        let molecule = get_molecule(input, &atoms);
+        let rules = get_rules(replacments);
+        let molecule = get_molecule(input);
         let tested = expand_molecule(
             rules
-                .get_key_value([atom("H"), atom("O")].as_slice())
+                .get_key_value([atom("H"), atom("O")].to_vec().as_slice())
                 .unwrap(),
             &molecule,
         );
-        let expected = HashSet::from([
+        let expected = Vec::from([
             [atom("H"), atom("O"), atom("O"), atom("H")].to_vec(),
             [atom("H"), atom("O"), atom("H"), atom("O")].to_vec(),
         ]);
@@ -265,49 +269,24 @@ mod tests {
     }
 
     #[test]
-    fn get_all_reduced_molecules_test() {
+    fn get_steps1_test() {
         let replacments = "H => HO\n\
-        H => OH\n\
-        H => OHe\n\
-        He => OHe\n\
-        O => HH";
-        let input = "HOHO";
-        let atoms = get_atoms(input);
-        let rules = get_rules(replacments, &atoms);
-        let molecule = get_molecule(input, &atoms);
-        let reduced_molecules = reduce_molecule(
-            rules
-                .get_key_value([atom("H"), atom("O")].as_slice())
-                .unwrap(),
-            &molecule,
-        );
-        let expected = HashSet::from([
-            [atom("H"), atom("H"), atom("O")].to_vec(),
-            [atom("H"), atom("O"), atom("H")].to_vec(),
-        ]);
-        assert_eq!(expected, reduced_molecules);
-    }
-
-    #[test]
-    fn get_steps_test() {
-        let replacments = "H => HO\n\
-        H => OH\n\
-        e => H\n\
-        e => O\n\
-        O => HH";
+            H => OH\n\
+            e => H\n\
+            e => O\n\
+            O => HH";
         let input = "HOH";
-        let atoms = get_atoms(input);
-        let rules = get_rules(replacments, &atoms);
-        let molecule = get_molecule(input, &atoms);
-        let steps = get_steps(&rules, &molecule);
+        let rules = get_rules(replacments);
+        let molecule = get_molecule(input);
+        let steps = get_steps_by_reduce(&rules, &molecule);
         assert_eq!(3usize, steps.unwrap());
         let input = "HOHOHO";
-        let molecule = get_molecule(input, &atoms);
-        let steps = get_steps(&rules, &molecule);
+        let molecule = get_molecule(input);
+        let steps = get_steps_by_reduce(&rules, &molecule);
         assert_eq!(6usize, steps.unwrap());
-        let input = "OOHOHOHOHHOOHHOHO";
-        let molecule = get_molecule(input, &atoms);
-        let steps = get_steps(&rules, &molecule);
-        assert_eq!(17usize, steps.unwrap());
+        let input = "OOHOOHHO";
+        let molecule = get_molecule(input);
+        let steps = get_steps_by_reduce(&rules, &molecule);
+        assert_eq!(8usize, steps.unwrap());
     }
 }
