@@ -57,7 +57,6 @@ fn get_rules(input: &str) -> Rules {
     for line in input.lines() {
         let splt: Vec<&str> = line.split_whitespace().collect();
         if splt.len() < 3 {
-            println!("{}", line);
             continue;
         }
         let mol = get_molecule(splt[2]);
@@ -157,7 +156,7 @@ fn get_steps_by_reduce(rules: &Rules, molecule: &Molecule) -> Option<usize> {
             println!("::: 1. {}", mol_to_str(reduced));
             return Some(1);
         }
-        if reduced.contains(&atom("e")) {
+        if reduced.contains(e.first()?) {
             continue;
         }
         if let Some(steps) = get_steps_by_reduce(rules, reduced) {
